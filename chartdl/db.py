@@ -51,4 +51,5 @@ class HitlistSong(Base):
     @staticmethod
     def construct_path(week, artist, title):
         return os.path.join(MUSIC_PATH, HitlistSong.__tablename__, str(week),
-                                    u'{} - {}'.format(artist, title))
+                                    u'{} - {}'.format(artist.replace('/', ' '),
+                                                      title.replace('/', ' ')))

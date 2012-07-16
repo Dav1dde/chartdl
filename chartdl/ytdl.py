@@ -12,7 +12,7 @@ def download(url, path, username=None, password=None, audio_only=False):
     
     args.append(url)
     
-    with open(flv_path, 'w') as f:
+    with open(flv_path, 'wb') as f:
         check_call(args, stdout=f)
     
     if audio_only:
