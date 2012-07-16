@@ -1,7 +1,7 @@
 from chartdl.mtvgt import get_charts
 from chartdl.ytdl import download
 from chartdl.db import init_db, Session, HitlistSong
-from chartdl.config import MUSIC_PATH
+from chartdl.config import MUSIC_PATH, DOWNLOAD_ICON
 from urllib import quote_plus
 from urlparse import urlparse, parse_qs
 from shutil import copy2
@@ -13,9 +13,18 @@ import os.path
 
 from sqlalchemy.orm.exc import NoResultFound
 
+try:
+    import pynotify
+except ImportError:
+    pynotify = None
+
+
 init_db()
 
-def download_charts(type_, username=None, password=None, audio_only=True):
+def download_charts(type_, username=None, password=None, audio_only=True, notify=True):
+    if notify and not pynotify is None:
+        pynotify.init('chartdl')
+    
     session = Session()
     
     calendar_week = datetime.now().isocalendar()[1]
@@ -67,6 +76,14 @@ def download_charts(type_, username=None, password=None, audio_only=True):
                 song.downloaded = True
                 
         session.commit()
+        
+        if notify and not pynotify is None:
+            msg = pynotify.Notification('Download finished: #{}'.format(chart['position']),
+                                        '{} - {}'.format(chart['artist'],
+                                                         chart['title']),
+                                        DOWNLOAD_ICON)
+            msg.show()
+        
     
     os.chdir(cwdir)
             
