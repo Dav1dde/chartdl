@@ -1,4 +1,4 @@
-from subprocess import check_call
+from subprocess import check_call, Popen, PIPE
 import os
 
 def download(url, path, username=None, password=None, audio_only=False):
@@ -11,10 +11,14 @@ def download(url, path, username=None, password=None, audio_only=False):
         args.extend(['-u', username, '-p', password])
     
     args.append(url)
-    
-    with open(flv_path, 'wb') as f:
-        check_call(args, stdout=f)
-    
+
     if audio_only:
-        check_call(['ffmpeg', '-y', '-i', flv_path, '-acodec', 'libmp3lame', '-ab', '128k', mp3_path])
-        os.remove(flv_path)
+        youtube_dl = Popen(args, stdout=PIPE)
+        ffmpeg = Popen(['ffmpeg', '-y', '-i', 'pipe:0', '-acodec',
+                        'libmp3lame', '-ab', '128k', mp3_path],
+                       stdin=youtube_dl.stdout)
+        youtube_dl.stdout.close()
+        ffmpeg.communicate()  
+    else:
+        with open(flv_path, 'wb') as f:
+            check_call(args, stdout=f)
