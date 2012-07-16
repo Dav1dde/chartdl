@@ -1,5 +1,4 @@
 from subprocess import check_call, Popen, PIPE
-import os
 
 def download(url, path, username=None, password=None, audio_only=False):
     flv_path = path + '.flv'

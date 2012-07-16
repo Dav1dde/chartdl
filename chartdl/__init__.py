@@ -2,16 +2,14 @@ from chartdl.mtvgt import get_charts
 from chartdl.ytdl import download
 from chartdl.db import init_db, Session, HitlistSong
 from chartdl.config import MUSIC_PATH, DOWNLOAD_ICON
+
+from sqlalchemy.orm.exc import NoResultFound
 from urllib import quote_plus
-from urlparse import urlparse, parse_qs
-from shutil import copy2
 from lxml import html
 from datetime import datetime
 from subprocess import CalledProcessError
 from os import makedirs
 import os.path
-
-from sqlalchemy.orm.exc import NoResultFound
 
 try:
     import pynotify
@@ -34,8 +32,6 @@ def download_charts(type_, username=None, password=None, audio_only=True, notify
         DB = HitlistSong
     else:
         raise ValueError
-    
-    cwdir = os.getcwd()
     
     path = os.path.join(MUSIC_PATH, type_, str(calendar_week))
     if not os.path.isdir(path):
@@ -83,9 +79,3 @@ def download_charts(type_, username=None, password=None, audio_only=True, notify
                                                          chart['title']),
                                         DOWNLOAD_ICON)
             msg.show()
-        
-    
-    os.chdir(cwdir)
-            
-            
-            

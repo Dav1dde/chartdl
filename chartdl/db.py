@@ -1,8 +1,8 @@
 from chartdl.config import DATABASE_URI, MUSIC_PATH
 
-from sqlalchemy import Table, Column, String, Integer, DateTime, Boolean, ForeignKey
+from sqlalchemy import Table, Column, String, Integer, Boolean
 from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from datetime import datetime
