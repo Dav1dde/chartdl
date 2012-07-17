@@ -105,18 +105,21 @@ class ChartDownloader(object):
         args.append(url)
     
         if audio_only:
-            youtube_dl = Popen(args, stdout=PIPE, stderr=PIPE)
+            youtube_dl = Popen(args, stdout=PIPE, stderr=PIPE,
+                               universal_newlines=True)
             ffmpeg = Popen(['ffmpeg', '-y', '-i', 'pipe:0', '-acodec',
                             'libmp3lame', '-ab', '128k', mp3_path],
-                           stdin=youtube_dl.stdout, stdout=PIPE, stderr=PIPE)
+                           stdin=youtube_dl.stdout, stdout=PIPE, stderr=PIPE,
+                           universal_newlines=True)
             youtube_dl.stdout.close()
+            yt_stderr = [line for line in self._yield_lines(youtube_dl.stderr)]
             ff_stdout, ff_stderr = ffmpeg.communicate()
             youtube_dl.wait()
             
             if not youtube_dl.returncode == 0:
-                raise DownloadError(youtube_dl.stderr.readlines()[-1])
+                raise DownloadError(yt_stderr[-1])
             if not ffmpeg.returncode == 0:
-                raise EncodingError(ff_stderr.split()[-1])
+                raise EncodingError(ff_stderr.splitlines()[-1])
             
             if not EasyID3 is None:
                 audio = EasyID3(mp3_path)
@@ -126,6 +129,20 @@ class ChartDownloader(object):
         else:
             with open(flv_path, 'wb') as f:
                 check_call(args, stdout=f)
+                
+    def _yield_lines(self, fd):
+        line = list()
+        while True:
+            char = fd.read(1)
+            #char = fd.readline()
+            if not char:
+                break
+            else:
+                line.append(char)
+            
+            if char == '\n':
+                yield ''.join(line)
+                line = list()
         
     def _search_youtube(self, chart):
         query = quote_plus(' '.join([chart['artist'].encode('utf-8'),

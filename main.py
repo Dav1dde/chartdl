@@ -14,7 +14,7 @@ def main():
                            'python2 {} $@'.format(yt_dl_py)]))
     os.chmod(yt_dl, 0755)
     
-    os.environ['PATH'] += ':' + PATH 
+    os.environ['PATH'] += ':' + PATH
     
     if len(sys.argv) == 3:
         _, username, password = sys.argv
