@@ -1,10 +1,11 @@
 from chartdl.mtvgt import get_charts
-from chartdl.ytdl import download
-from chartdl.db import init_db, Session, HitlistSong
-from chartdl.config import MUSIC_PATH, DOWNLOAD_ICON
+from chartdl.db import Base, HitlistSong
 
 from sqlalchemy.orm.exc import NoResultFound
-from urllib import quote_plus
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from subprocess import check_call, Popen, PIPE
+from urllib import urlretrieve, quote_plus
 from lxml import html
 from datetime import datetime
 from subprocess import CalledProcessError
@@ -12,70 +13,129 @@ from os import makedirs
 import os.path
 
 try:
+    from mutagen.easyid3 import EasyID3
+except ImportError:
+    EasyID3 = None
+
+try:
     import pynotify
 except ImportError:
     pynotify = None
+    
+if not pynotify is None:
+    pynotify.init('chartdl')
 
 
-init_db()
+DOWNLOAD_ICON = os.path.join(os.path.split(os.path.abspath(__file__))[0],
+                             '../src/download_icon.png') 
+YT_SEARCH_URL = 'http://www.youtube.com/results?search_type=videos' \
+                        '&search_category=10&uni=3?search_query={query}'
 
-def download_charts(type_, username=None, password=None, audio_only=True, notify=True):
-    if notify and not pynotify is None:
-        pynotify.init('chartdl')
-    
-    session = Session()
-    
-    calendar_week = datetime.now().isocalendar()[1]
-    
-    charts = get_charts(type_)
-    if type_ == 'hitlist':
-        DB = HitlistSong
-    else:
-        raise ValueError
-    
-    path = os.path.join(MUSIC_PATH, type_, str(calendar_week))
-    if not os.path.isdir(path):
-        makedirs(path)
-    
-    for chart in charts:
-        print chart
-        
-        query = session.query(DB).filter(DB.week == calendar_week) \
-                                 .filter(DB.position == chart['position'])
-        try:
-            song = query.one()
-        except NoResultFound:
-            song = DB.from_chart(chart)
-            session.add(song)
-        
-        if song.downloaded:
-            continue
-        
-        
-        url = u'http://www.youtube.com/results?search_query='.encode('utf-8') + \
-                quote_plus(' '.join([chart['artist'].encode('utf-8'),
-                                     chart['title'].encode('utf-8')]))
 
-        root = html.parse(url).getroot()
-        root.make_links_absolute('http://www.youtube.com/')
-        videos = root.cssselect('a.yt-uix-sessionlink')
+class ChartDownloader(object):
+    def __init__(self, database_uri, music_dir):
+        self.database_uri = database_uri
+        self.music_dir = music_dir
         
-        if videos:
-            video_url = videos[0].get('href')
-            
+        self.engine = create_engine(self.database_uri, convert_unicode=True)
+        self.Session = sessionmaker(bind=self.engine)
+        Base.metadata.create_all(self.engine)
+
+    def download_charts(self, type_, username=None, password=None,
+                        audio_only=True, notify=False):
+        session = self.Session()
+        
+        calendar_week = datetime.now().isocalendar()[1]
+        
+        charts = get_charts(type_)
+        if type_ == 'hitlist':
+            DB = HitlistSong
+        else:
+            raise ValueError
+        
+        path = os.path.join(self.music_dir, type_, str(calendar_week))
+        if not os.path.isdir(path):
+            makedirs(path)
+        
+        for chart in charts:
+            query = session.query(DB).filter(DB.week == calendar_week) \
+                                     .filter(DB.position == chart['position'])
             try:
-                download(video_url, song, username=username, password=password,
-                         audio_only=audio_only)
+                song = query.one()
+            except NoResultFound:
+                song = DB.from_chart(chart)
+                session.add(song)
+            else:
+                if song.downloaded:
+                    continue
+            
+            video_url = self._search_youtube(chart)
+                
+            try:
+                self.download(video_url, song,
+                              username=username, password=password,
+                              audio_only=audio_only)
             except CalledProcessError:
                 pass
             else:
                 song.downloaded = True
-                
-        session.commit()
+                    
+            session.commit()
+            
+            self._notify_download_done(chart, notify)
+
+    def download(self, url, song, username=None, password=None, audio_only=False):
+        flv_path = song.path + '.flv'
+        mp3_path = song.path + '.mp3'
+            
+        args = ['youtube-dl', '--no-continue', '-o', '-']
         
+        if not username is None and not password is None:
+            args.extend(['-u', username, '-p', password])
+        
+        args.append(url)
+    
+        if audio_only:
+            youtube_dl = Popen(args, stdout=PIPE)
+            ffmpeg = Popen(['ffmpeg', '-y', '-i', 'pipe:0', '-acodec',
+                            'libmp3lame', '-ab', '128k', mp3_path],
+                           stdin=youtube_dl.stdout)
+            youtube_dl.stdout.close()
+            ffmpeg.communicate()
+            
+            if not EasyID3 is None:
+                audio = EasyID3(mp3_path)
+                audio['title'] = song.title
+                audio['artist'] = song.artist
+                audio.save()
+        else:
+            with open(flv_path, 'wb') as f:
+                check_call(args, stdout=f)
+        
+    def _search_youtube(self, chart):
+        query = quote_plus(' '.join([chart['artist'].encode('utf-8'),
+                                     chart['title'].encode('utf-8')])) \
+                           .decode('utf-8')
+        
+        search_url = YT_SEARCH_URL.format(query=query)
+    
+        root = html.parse(search_url).getroot()
+        root.make_links_absolute('http://www.youtube.com/')
+        videos = root.cssselect('a.yt-uix-sessionlink')
+        
+        return videos[0].get('href')
+    
+    def _notify_download_done(self, chart, notify):
         if notify and not pynotify is None:
-            msg = pynotify.Notification('Download finished: #{}'.format(chart['position']),
-                                        '{} - {}'.format(chart['artist'],
-                                                         chart['title']),
-                                        chart['image']['src'])
+            if chart['image'].get('src'):
+                image, _ = urlretrieve(chart['image']['src'])
+            else:
+                image = DOWNLOAD_ICON
+                
+            title = u'Download finished: #{}'.format(chart['position'])
+            text = u'{} - {}'.format(chart['artist'], chart['title'])
+            msg = pynotify.Notification(title, text, image)
             msg.show()
+        
+        
+        

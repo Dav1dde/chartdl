@@ -1,19 +1,8 @@
-from chartdl.config import DATABASE_URI, MUSIC_PATH
-
 from sqlalchemy import Table, Column, String, Integer, Boolean
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from datetime import datetime
 import os.path
-
-engine = create_engine(DATABASE_URI, convert_unicode=True)
-
-Session = sessionmaker(bind=engine)
-
-def init_db():
-    Base.metadata.create_all(engine)
 
 Base = declarative_base() 
 
@@ -50,6 +39,6 @@ class HitlistSong(Base):
     
     @staticmethod
     def construct_path(week, artist, title):
-        return os.path.join(MUSIC_PATH, HitlistSong.__tablename__, str(week),
+        return os.path.join(HitlistSong.__tablename__, str(week),
                                     u'{} - {}'.format(artist.replace('/', ' '),
                                                       title.replace('/', ' ')))
