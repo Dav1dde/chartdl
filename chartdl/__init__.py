@@ -31,7 +31,7 @@ if not pynotify is None:
 DOWNLOAD_ICON = os.path.join(os.path.split(os.path.abspath(__file__))[0],
                              '../src/download_icon.png') 
 YT_SEARCH_URL = 'http://www.youtube.com/results?search_type=videos' \
-                        '&search_category=10&uni=3?search_query={query}'
+                        '&search_category=10&uni=3&search_query={query}'
 
 
 class ChartDownloader(object):
@@ -85,7 +85,6 @@ class ChartDownloader(object):
                 pass
             except DownloadError, e:
                 if e.is_gema_error:
-                    print 'gema error, again', video_result
                     chart_queue.put((chart, video_result+1))
             else:
                 song.downloaded = True
@@ -134,7 +133,7 @@ class ChartDownloader(object):
                            .decode('utf-8')
         
         search_url = YT_SEARCH_URL.format(query=query)
-    
+
         root = html.parse(search_url).getroot()
         root.make_links_absolute('http://www.youtube.com/')
         videos = root.cssselect('a.yt-uix-sessionlink')

@@ -25,7 +25,8 @@ def main():
                                        u'/home/dav1d/datein/musik/charts/')
     chart_downloader.download_charts('hitlist',
                                      username=username,
-                                     password=password)    
+                                     password=password,
+                                     notify=True)    
 
 if __name__ == '__main__':
     main()
