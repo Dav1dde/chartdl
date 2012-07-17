@@ -1,5 +1,6 @@
 from chartdl.mtvgt import get_charts
 from chartdl.db import Base, HitlistSong
+from chartdl.exc import DownloadError, EncodingError
 
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import sessionmaker
@@ -7,6 +8,7 @@ from sqlalchemy import create_engine
 from subprocess import check_call, Popen, PIPE
 from urllib import urlretrieve, quote_plus
 from lxml import html
+from Queue import Queue
 from datetime import datetime
 from subprocess import CalledProcessError
 from os import makedirs
@@ -48,6 +50,8 @@ class ChartDownloader(object):
         calendar_week = datetime.now().isocalendar()[1]
         
         charts = get_charts(type_)
+        chart_queue = Queue()
+        [chart_queue.put((chart, 0)) for chart in charts]
         if type_ == 'hitlist':
             DB = HitlistSong
         else:
@@ -57,7 +61,8 @@ class ChartDownloader(object):
         if not os.path.isdir(path):
             makedirs(path)
         
-        for chart in charts:
+        while not chart_queue.empty():
+            chart, video_result = chart_queue.get()            
             query = session.query(DB).filter(DB.week == calendar_week) \
                                      .filter(DB.position == chart['position'])
             try:
@@ -69,20 +74,25 @@ class ChartDownloader(object):
                 if song.downloaded:
                     continue
             
-            video_url = self._search_youtube(chart)
-                
+            video = self._search_youtube(chart)[video_result]
+            video_url = video.get('href')
+
             try:
                 self.download(video_url, song,
                               username=username, password=password,
                               audio_only=audio_only)
             except CalledProcessError:
                 pass
+            except DownloadError, e:
+                if e.is_gema_error:
+                    print 'gema error, again', video_result
+                    chart_queue.put((chart, video_result+1))
             else:
                 song.downloaded = True
                     
             session.commit()
             
-            self._notify_download_done(chart, notify)
+            self._notify_download_done(chart, notify, song.downloaded)
 
     def download(self, url, song, username=None, password=None, audio_only=False):
         flv_path = song.path + '.flv'
@@ -96,12 +106,18 @@ class ChartDownloader(object):
         args.append(url)
     
         if audio_only:
-            youtube_dl = Popen(args, stdout=PIPE)
+            youtube_dl = Popen(args, stdout=PIPE, stderr=PIPE)
             ffmpeg = Popen(['ffmpeg', '-y', '-i', 'pipe:0', '-acodec',
                             'libmp3lame', '-ab', '128k', mp3_path],
-                           stdin=youtube_dl.stdout)
+                           stdin=youtube_dl.stdout, stdout=PIPE, stderr=PIPE)
             youtube_dl.stdout.close()
-            ffmpeg.communicate()
+            ff_stdout, ff_stderr = ffmpeg.communicate()
+            youtube_dl.wait()
+            
+            if not youtube_dl.returncode == 0:
+                raise DownloadError(youtube_dl.stderr.readlines()[-1])
+            if not ffmpeg.returncode == 0:
+                raise EncodingError(ff_stderr.split()[-1])
             
             if not EasyID3 is None:
                 audio = EasyID3(mp3_path)
@@ -123,16 +139,17 @@ class ChartDownloader(object):
         root.make_links_absolute('http://www.youtube.com/')
         videos = root.cssselect('a.yt-uix-sessionlink')
         
-        return videos[0].get('href')
+        return videos
     
-    def _notify_download_done(self, chart, notify):
+    def _notify_download_done(self, chart, notify, success):
         if notify and not pynotify is None:
             if chart['image'].get('src'):
                 image, _ = urlretrieve(chart['image']['src'])
             else:
                 image = DOWNLOAD_ICON
-                
-            title = u'Download finished: #{}'.format(chart['position'])
+            
+            status = 'finished' if success else 'failed'
+            title = u'Download {}: #{}'.format(status, chart['position'])
             text = u'{} - {}'.format(chart['artist'], chart['title'])
             msg = pynotify.Notification(title, text, image)
             msg.show()
