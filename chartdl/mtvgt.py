@@ -14,8 +14,8 @@ def _parse_charts(lxml_html):
                        'last_position' : _last_position_conv(last_position \
                                                            .text.strip()),
                        'image' :  dict(image.attrib),
-                       'title' : info[1].text.strip(),
-                       'artist' : info[0].text.strip()})
+                       'title' : info[0].text.strip(),
+                       'artist' : info[1].text.strip()})
         
     return result
 
@@ -27,8 +27,8 @@ def _parse_video_charts(lxml_html):
     for position, _, image, _, info in (e[0] for e in charts_list):
         result.append({'position' : int(position.text.strip()),
                        'image' :  dict(image.attrib),
-                       'title' : info[1].text.strip(),
-                       'artist' : info[0].text.strip()})
+                       'title' : info[0].text.strip(),
+                       'artist' : info[1].text.strip()})
         
     return result
     

@@ -64,7 +64,7 @@ def download_charts(type_, username=None, password=None, audio_only=True, notify
             video_url = videos[0].get('href')
             
             try:
-                download(video_url, song.path, username=username, password=password,
+                download(video_url, song, username=username, password=password,
                          audio_only=audio_only)
             except CalledProcessError:
                 pass
@@ -77,5 +77,5 @@ def download_charts(type_, username=None, password=None, audio_only=True, notify
             msg = pynotify.Notification('Download finished: #{}'.format(chart['position']),
                                         '{} - {}'.format(chart['artist'],
                                                          chart['title']),
-                                        DOWNLOAD_ICON)
+                                        chart['image']['src'])
             msg.show()
