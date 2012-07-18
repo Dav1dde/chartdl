@@ -19,14 +19,9 @@ def search_youtube(chart):
     return videos
 
 def yield_lines(fd):
-    line = list()
     while True:
-        char = fd.read(1)
-        if not char:
+        line = fd.readline()
+        if not line:
             break
-        else:
-            line.append(char)
         
-        if char == '\n':
-            yield ''.join(line)
-            line = list()
+        yield line

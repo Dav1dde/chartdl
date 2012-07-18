@@ -18,6 +18,7 @@ class HitlistSong(Base):
     week = Column(Integer, primary_key=True)
     downloaded = Column(Boolean, default=False)
     path = Column(String)
+    video_id = Column(String)
 
     @classmethod
     def from_chart(cls, chart, downloaded=False):

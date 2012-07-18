@@ -1,9 +1,10 @@
 from subprocess import CalledProcessError, check_call, Popen, PIPE
+from urlparse import urlparse, parse_qs
 from urllib import urlretrieve
 from datetime import datetime
 from Queue import Queue
-from os import makedirs
 import os.path
+import os
 import sys
 
 from sqlalchemy.orm.exc import NoResultFound
@@ -60,10 +61,11 @@ class ChartDownloader(object):
         
         path = os.path.join(self.music_dir, type_, str(calendar_week))
         if not os.path.isdir(path):
-            makedirs(path)
+            os.makedirs(path)
         
         while not chart_queue.empty():
             chart, video_result = chart_queue.get()            
+            
             query = session.query(DB).filter(DB.week == calendar_week) \
                                      .filter(DB.position == chart['position'])
             try:
@@ -77,6 +79,21 @@ class ChartDownloader(object):
             
             video = search_youtube(chart)[video_result]
             video_url = video.get('href')
+            video_id = parse_qs(urlparse(video_url).query)['v'][0]
+            
+            try:
+                old = session.query(DB).filter(DB.video_id == video_id).one()
+            except NoResultFound:
+                pass
+            else:
+                song_path = os.path.join(self.music_dir, song.path)
+                old_path = os.path.join(self.music_dir, old.path)
+                suffix = '.mp3' if audio_only else '.flv'
+                
+                if os.path.exists(old_path + suffix):
+                    os.link(old_path + suffix, song_path + suffix)
+                    song.video_id = video_id
+                    song.downloaded = True
 
             try:
                 self.download(video_url, song,
@@ -88,6 +105,7 @@ class ChartDownloader(object):
                 if e.is_gema_error:
                     chart_queue.put((chart, video_result+1))
             else:
+                song.video_id = video_id
                 song.downloaded = True
                     
             session.commit()
@@ -97,8 +115,9 @@ class ChartDownloader(object):
     def download(self, url, song,
                  username=None, password=None, audio_only=False):
         self.log('Downloading: {0!s}\n'.format(song))
-        flv_path = song.path + '.flv'
-        mp3_path = song.path + '.mp3'
+        path = os.path.join(self.music_dir, song.path)
+        flv_path = path + '.flv'
+        mp3_path = path + '.mp3'
             
         args = ['youtube-dl', '--no-continue', '-o', '-']
         
@@ -109,7 +128,7 @@ class ChartDownloader(object):
     
         if audio_only:
             youtube_dl = Popen(args, stdout=PIPE, stderr=PIPE,
-                               universal_newlines=True)
+                               universal_newlines=True, bufsize=1)
             ffmpeg = Popen(['ffmpeg', '-y', '-i', 'pipe:0', '-acodec',
                             'libmp3lame', '-ab', '128k', mp3_path],
                            stdin=youtube_dl.stdout, stdout=PIPE, stderr=PIPE,
