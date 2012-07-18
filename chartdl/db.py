@@ -42,3 +42,6 @@ class HitlistSong(Base):
         return os.path.join(HitlistSong.__tablename__, str(week),
                                     u'{} - {}'.format(artist.replace('/', ' '),
                                                       title.replace('/', ' ')))
+
+    def __str__(self):
+        return '{self.artist} - {self.title}'.format(self=self)

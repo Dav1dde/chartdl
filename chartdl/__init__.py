@@ -1,18 +1,20 @@
 from chartdl.mtvgt import get_charts
 from chartdl.db import Base, HitlistSong
 from chartdl.exc import DownloadError, EncodingError
+from chartdl.util import search_youtube, yield_lines
 
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from subprocess import check_call, Popen, PIPE
-from urllib import urlretrieve, quote_plus
+from urllib import urlretrieve
 from lxml import html
 from Queue import Queue
 from datetime import datetime
 from subprocess import CalledProcessError
 from os import makedirs
 import os.path
+import sys
 
 try:
     from mutagen.easyid3 import EasyID3
@@ -30,14 +32,14 @@ if not pynotify is None:
 
 DOWNLOAD_ICON = os.path.join(os.path.split(os.path.abspath(__file__))[0],
                              '../src/download_icon.png') 
-YT_SEARCH_URL = 'http://www.youtube.com/results?search_type=videos' \
-                        '&search_category=10&uni=3&search_query={query}'
-
 
 class ChartDownloader(object):
-    def __init__(self, database_uri, music_dir):
+    def __init__(self, database_uri, music_dir, verbose=False, notify=False):
         self.database_uri = database_uri
         self.music_dir = music_dir
+        self.verbose = verbose
+        self.notify = notify
+        self._output_fd = sys.stdout
         
         self.engine = create_engine(self.database_uri, convert_unicode=True)
         self.Session = sessionmaker(bind=self.engine)
@@ -74,15 +76,15 @@ class ChartDownloader(object):
                 if song.downloaded:
                     continue
             
-            video = self._search_youtube(chart)[video_result]
+            video = search_youtube(chart)[video_result]
             video_url = video.get('href')
 
             try:
                 self.download(video_url, song,
                               username=username, password=password,
                               audio_only=audio_only)
-            except CalledProcessError:
-                pass
+            except CalledProcessError, e:
+                self.log(e)
             except DownloadError, e:
                 if e.is_gema_error:
                     chart_queue.put((chart, video_result+1))
@@ -93,7 +95,9 @@ class ChartDownloader(object):
             
             self._notify_download_done(chart, notify, song.downloaded)
 
-    def download(self, url, song, username=None, password=None, audio_only=False):
+    def download(self, url, song,
+                 username=None, password=None, audio_only=False):
+        self.log('Downloading: {0!s}\n'.format(song))
         flv_path = song.path + '.flv'
         mp3_path = song.path + '.mp3'
             
@@ -112,7 +116,8 @@ class ChartDownloader(object):
                            stdin=youtube_dl.stdout, stdout=PIPE, stderr=PIPE,
                            universal_newlines=True)
             youtube_dl.stdout.close()
-            yt_stderr = [line for line in self._yield_lines(youtube_dl.stderr)]
+            yt_stderr = [self.log(line) for line in
+                         yield_lines(youtube_dl.stderr) if line.strip()]
             ff_stdout, ff_stderr = ffmpeg.communicate()
             youtube_dl.wait()
             
@@ -130,35 +135,8 @@ class ChartDownloader(object):
             with open(flv_path, 'wb') as f:
                 check_call(args, stdout=f)
                 
-    def _yield_lines(self, fd):
-        line = list()
-        while True:
-            char = fd.read(1)
-            #char = fd.readline()
-            if not char:
-                break
-            else:
-                line.append(char)
-            
-            if char == '\n':
-                yield ''.join(line)
-                line = list()
-        
-    def _search_youtube(self, chart):
-        query = quote_plus(' '.join([chart['artist'].encode('utf-8'),
-                                     chart['title'].encode('utf-8')])) \
-                           .decode('utf-8')
-        
-        search_url = YT_SEARCH_URL.format(query=query)
-
-        root = html.parse(search_url).getroot()
-        root.make_links_absolute('http://www.youtube.com/')
-        videos = root.cssselect('a.yt-uix-sessionlink')
-        
-        return videos
-    
     def _notify_download_done(self, chart, notify, success):
-        if notify and not pynotify is None:
+        if self.notify and not pynotify is None:
             if chart['image'].get('src'):
                 image, _ = urlretrieve(chart['image']['src'])
             else:
@@ -167,8 +145,13 @@ class ChartDownloader(object):
             status = 'finished' if success else 'failed'
             title = u'Download {}: #{}'.format(status, chart['position'])
             text = u'{} - {}'.format(chart['artist'], chart['title'])
+            self.log(' '.join([title, text, '\n']))
             msg = pynotify.Notification(title, text, image)
             msg.show()
-        
+    
+    def log(self, message):
+        if self.verbose:
+            self._output_fd.write(message)
+        return message
         
         

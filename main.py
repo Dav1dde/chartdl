@@ -22,11 +22,12 @@ def main():
         username, password = None, None
     
     chart_downloader = ChartDownloader(u'sqlite:///music.db',
-                                       u'/home/dav1d/datein/musik/charts/')
+                                       u'/home/dav1d/datein/musik/charts/',
+                                       notify=True,
+                                       verbose=True)
     chart_downloader.download_charts('hitlist',
                                      username=username,
-                                     password=password,
-                                     notify=True)    
+                                     password=password)    
 
 if __name__ == '__main__':
     main()
