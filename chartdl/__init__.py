@@ -1,20 +1,20 @@
-from chartdl.mtvgt import get_charts
-from chartdl.db import Base, HitlistSong
-from chartdl.exc import DownloadError, EncodingError
-from chartdl.util import search_youtube, yield_lines
+from subprocess import CalledProcessError, check_call, Popen, PIPE
+from urllib import urlretrieve
+from datetime import datetime
+from Queue import Queue
+from os import makedirs
+import os.path
+import sys
 
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from subprocess import check_call, Popen, PIPE
-from urllib import urlretrieve
 from lxml import html
-from Queue import Queue
-from datetime import datetime
-from subprocess import CalledProcessError
-from os import makedirs
-import os.path
-import sys
+
+from chartdl.mtvgt import get_charts
+from chartdl.db import Base, HitlistSong
+from chartdl.exc import DownloadError, EncodingError
+from chartdl.util import search_youtube, yield_lines
 
 try:
     from mutagen.easyid3 import EasyID3
@@ -25,13 +25,12 @@ try:
     import pynotify
 except ImportError:
     pynotify = None
-    
-if not pynotify is None:
+else:
     pynotify.init('chartdl')
 
 
 DOWNLOAD_ICON = os.path.join(os.path.split(os.path.abspath(__file__))[0],
-                             '../src/download_icon.png') 
+                             '..', 'src', 'download_icon.png') 
 
 class ChartDownloader(object):
     def __init__(self, database_uri, music_dir, verbose=False, notify=False):
@@ -151,7 +150,9 @@ class ChartDownloader(object):
     
     def log(self, message):
         if self.verbose:
-            self._output_fd.write(message)
+            msg = message.encode('utf-8') if isinstance(message, unicode) \
+                    else message
+            self._output_fd.write(msg)
         return message
         
         
