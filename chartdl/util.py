@@ -3,7 +3,7 @@ from urllib import quote_plus
 
 
 YT_SEARCH_URL = 'http://www.youtube.com/results?search_type=videos' \
-                        '&search_category=10&uni=3&search_query={query}'
+                        '&search_query={query}'
 
 def search_youtube(chart):
     query = quote_plus(' '.join([chart['artist'].encode('utf-8'),
