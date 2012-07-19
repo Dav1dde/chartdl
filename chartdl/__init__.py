@@ -82,7 +82,10 @@ class ChartDownloader(object):
             video_id = parse_qs(urlparse(video_url).query)['v'][0]
             
             try:
-                old = session.query(DB).filter(DB.video_id == video_id).one()
+                old = session.query(DB).filter(DB.video_id == video_id) \
+                                       .filter(DB.week != song.week) \
+                                       .filter(DB.position != song.position) \
+                                       .one()
             except NoResultFound:
                 pass
             else:
@@ -143,7 +146,7 @@ class ChartDownloader(object):
                 raise DownloadError(yt_stderr[-1])
             if not ffmpeg.returncode == 0:
                 raise EncodingError(ff_stderr.splitlines()[-1])
-            
+                        
             if not EasyID3 is None:
                 audio = EasyID3(mp3_path)
                 audio['title'] = song.title
