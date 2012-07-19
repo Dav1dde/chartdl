@@ -129,7 +129,7 @@ class ChartDownloader(object):
             args.extend(['-u', username, '-p', password])
         
         args.append(url)
-    
+     
         if audio_only:
             tempfile = NamedTemporaryFile(delete=False)
             tempfile.close()
@@ -137,13 +137,14 @@ class ChartDownloader(object):
             youtube_dl = Popen(args, stdout=PIPE, stderr=PIPE,
                                universal_newlines=True)
             mplayer = Popen(['mplayer', '-', '-really-quiet',
-                             '-nocorrect-pts', '-vc', 'null', '-vo', 'null',
+                             '-vc', 'null', '-vo', 'null',
                              '-ao', 'pcm:fast:file=' + tempfile.name],
                             stdin=youtube_dl.stdout, stdout=PIPE, stderr=PIPE,
                             universal_newlines=True)
             youtube_dl.stdout.close()
             yt_stderr = [self.log(line) for line in
                          yield_lines(youtube_dl.stderr) if line.strip()]
+            youtube_dl.stderr.close()
             mp_stdout, mp_stderr = mplayer.communicate()
             youtube_dl.wait()
             
