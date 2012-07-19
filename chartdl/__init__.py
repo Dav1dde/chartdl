@@ -16,7 +16,7 @@ from lxml import html
 from chartdl.mtvgt import get_charts
 from chartdl.db import Base, HitlistSong
 from chartdl.exc import DownloadError, EncodingError
-from chartdl.util import search_youtube, yield_lines
+from chartdl.util import search_youtube, yield_lines, ytdl_filter
 
 try:
     from mutagen.easyid3 import EasyID3
@@ -99,6 +99,8 @@ class ChartDownloader(object):
                     song.video_id = video_id
                     song.downloaded = True
 
+            self.log('Downloading #{0}: {1!s}.\n'
+                     .format(chart['position'], song))
             try:
                 self.download(video_url, song,
                               username=username, password=password,
@@ -118,7 +120,6 @@ class ChartDownloader(object):
 
     def download(self, url, song,
                  username=None, password=None, audio_only=False):
-        self.log('Downloading: {0!s}.\n'.format(song))
         path = os.path.join(self.music_dir, song.path)
         flv_path = path + '.flv'
         mp3_path = path + '.mp3'
@@ -142,7 +143,7 @@ class ChartDownloader(object):
                             stdin=youtube_dl.stdout, stdout=PIPE, stderr=PIPE,
                             universal_newlines=True)
             youtube_dl.stdout.close()
-            yt_stderr = [self.log(line) for line in
+            yt_stderr = [self.log(ytdl_filter(line)) for line in
                          yield_lines(youtube_dl.stderr) if line.strip()]
             youtube_dl.stderr.close()
             mp_stdout, mp_stderr = mplayer.communicate()
@@ -153,7 +154,7 @@ class ChartDownloader(object):
             if not mplayer.returncode == 0:
                 raise EncodingError(mp_stderr.splitlines()[-1])
             
-            self.log('Starting lame.\n')
+            self.log('\nStarting lame.\n')
             lame = Popen(['lame', '-h', tempfile.name, mp3_path],
                          stdout=PIPE, stderr=PIPE)
             lame_stdout, lame_stderr = lame.communicate()
@@ -181,7 +182,7 @@ class ChartDownloader(object):
             status = 'finished' if success else 'failed'
             title = u'Download {}: #{}'.format(status, chart['position'])
             text = u'{} - {}'.format(chart['artist'], chart['title'])
-            self.log(' '.join([title, text, '\n']))
+            self.log(' '.join([title, text, '\n\n']))
             msg = pynotify.Notification(title, text, image)
             msg.show()
     
@@ -190,6 +191,7 @@ class ChartDownloader(object):
             msg = message.encode('utf-8') if isinstance(message, unicode) \
                     else message
             self._output_fd.write(msg)
+            self._output_fd.flush()
         return message
         
         
