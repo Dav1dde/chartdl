@@ -1,4 +1,5 @@
 from subprocess import CalledProcessError, check_call, Popen, PIPE
+from tempfile import NamedTemporaryFile
 from urlparse import urlparse, parse_qs
 from urllib import urlretrieve
 from datetime import datetime
@@ -117,7 +118,7 @@ class ChartDownloader(object):
 
     def download(self, url, song,
                  username=None, password=None, audio_only=False):
-        self.log('Downloading: {0!s}\n'.format(song))
+        self.log('Downloading: {0!s}.\n'.format(song))
         path = os.path.join(self.music_dir, song.path)
         flv_path = path + '.flv'
         mp3_path = path + '.mp3'
@@ -130,28 +131,41 @@ class ChartDownloader(object):
         args.append(url)
     
         if audio_only:
+            tempfile = NamedTemporaryFile(delete=False)
+            tempfile.close()
+            
             youtube_dl = Popen(args, stdout=PIPE, stderr=PIPE,
-                               universal_newlines=True, bufsize=1)
-            ffmpeg = Popen(['ffmpeg', '-y', '-i', 'pipe:0', '-acodec',
-                            'libmp3lame', '-ab', '128k', mp3_path],
-                           stdin=youtube_dl.stdout, stdout=PIPE, stderr=PIPE,
-                           universal_newlines=True)
+                               universal_newlines=True)
+            mplayer = Popen(['mplayer', '-', '-really-quiet',
+                             '-nocorrect-pts', '-vc', 'null', '-vo', 'null',
+                             '-ao', 'pcm:fast:file=' + tempfile.name],
+                            stdin=youtube_dl.stdout, stdout=PIPE, stderr=PIPE,
+                            universal_newlines=True)
             youtube_dl.stdout.close()
             yt_stderr = [self.log(line) for line in
                          yield_lines(youtube_dl.stderr) if line.strip()]
-            ff_stdout, ff_stderr = ffmpeg.communicate()
+            mp_stdout, mp_stderr = mplayer.communicate()
             youtube_dl.wait()
             
             if not youtube_dl.returncode == 0:
                 raise DownloadError(yt_stderr[-1])
-            if not ffmpeg.returncode == 0:
-                raise EncodingError(ff_stderr.splitlines()[-1])
+            if not mplayer.returncode == 0:
+                raise EncodingError(mp_stderr.splitlines()[-1])
+            
+            self.log('Starting lame.\n')
+            lame = Popen(['lame', '-h', tempfile.name, mp3_path],
+                         stdout=PIPE, stderr=PIPE)
+            lame_stdout, lame_stderr = lame.communicate()
                         
+            if not lame.returncode == 0:
+                raise EncodingError(lame_stderr.splitlines()[-1])
+            self.log('Encoding finished.\n')
+            
             if not EasyID3 is None:
-                audio = EasyID3(mp3_path)
+                audio = EasyID3()
                 audio['title'] = song.title
                 audio['artist'] = song.artist
-                audio.save()
+                audio.save(mp3_path)
         else:
             with open(flv_path, 'wb') as f:
                 check_call(args, stdout=f)
