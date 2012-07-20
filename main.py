@@ -1,11 +1,43 @@
-from chartdl import ChartDownloader
+from contextlib import contextmanager
 import os
 import os.path
 import sys
 
 PATH = os.path.split(os.path.abspath(__file__))[0]
 
+# from https://gist.github.com/3151059
+@contextmanager
+def suppress_output(fd):
+    '''
+    Suppress output to the given ``fd``::
+
+       with suppress_fd(sys.stderr):
+           # in this block any output to standard error is suppressed
+
+    ``fd`` is an integral file descriptor, or any object with a ``fileno()``
+    method.
+    '''
+    if hasattr(fd, 'fileno'):
+        if hasattr(fd, 'flush'):
+            fd.flush()
+        fd = fd.fileno()
+
+    oldfd = os.dup(fd)
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        try:
+            os.dup2(devnull, fd)
+        finally:
+            os.close(devnull)
+        yield
+        os.dup2(oldfd, fd)
+    finally:
+        os.close(oldfd)
+        
 def main():
+    with suppress_output(sys.stderr):
+        from chartdl import ChartDownloader
+    
     yt_dl = os.path.join(PATH, 'youtube-dl')
     yt_dl_py = os.path.join(PATH, 'youtube_dl', '__main__.py')
     

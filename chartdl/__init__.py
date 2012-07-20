@@ -4,7 +4,6 @@ from urlparse import urlparse, parse_qs
 from urllib import urlretrieve
 from datetime import datetime
 from Queue import Queue
-import warnings
 import os.path
 import os
 import sys
@@ -25,9 +24,7 @@ except ImportError:
     EasyID3 = None
 
 try:
-    with warnings.catch_warnings():
-        warnings.simplefilter('error')
-        import pynotify
+    import pynotify
 except ImportError:
     pynotify = None
 else:
