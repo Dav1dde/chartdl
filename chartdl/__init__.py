@@ -1,8 +1,8 @@
 from subprocess import CalledProcessError, check_call, Popen, PIPE
 from tempfile import NamedTemporaryFile
 from urlparse import urlparse, parse_qs
+from datetime import timedelta, date
 from urllib import urlretrieve
-from datetime import datetime
 from Queue import Queue
 import os.path
 import os
@@ -50,15 +50,20 @@ class ChartDownloader(object):
                         audio_only=True, notify=False):
         session = self.Session()
         
-        calendar_week = datetime.now().isocalendar()[1]
-        
-        charts = get_charts(type_)
-        chart_queue = Queue()
-        [chart_queue.put((chart, 0)) for chart in charts]
         if type_ == 'hitlist':
             DB = HitlistSong
         else:
             raise ValueError
+        
+        calendar_week = date.today().isocalendar()[1]
+
+        charts = get_charts(type_)
+        query = session.query(DB).filter(DB.week == calendar_week)
+        if not all(song == charts[song.position-1] for song in query):
+            calendar_week = (date.today() + timedelta(days=7)).isocalendar()[1]
+        
+        chart_queue = Queue()
+        [chart_queue.put((chart, 0)) for chart in charts]
         
         path = os.path.join(self.music_dir, type_, str(calendar_week))
         if not os.path.isdir(path):
@@ -73,6 +78,7 @@ class ChartDownloader(object):
                 song = query.one()
             except NoResultFound:
                 song = DB.from_chart(chart)
+                song.week = calendar_week
                 session.add(song)
             else:
                 if song.downloaded:

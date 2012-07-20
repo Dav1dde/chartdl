@@ -44,5 +44,16 @@ class HitlistSong(Base):
                                     u'{} - {}'.format(artist.replace('/', ' '),
                                                       title.replace('/', ' ')))
 
+    def __eq__(self, other):
+        if isinstance(other, dict):
+            return all(getattr(self, value) == other.get('value') for value in
+                       ['artist', 'title', 'position', 'last_position'])
+        else:
+            return Base.__eq__(self, other)
+    
+    def __ne__(self, other):
+        return not self == other
+
+
     def __str__(self):
         return '{self.artist} - {self.title}'.format(self=self)
