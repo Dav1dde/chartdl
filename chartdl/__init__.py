@@ -82,14 +82,11 @@ class ChartDownloader(object):
             video_url = video.get('href')
             video_id = parse_qs(urlparse(video_url).query)['v'][0]
             
-            try:
-                old = session.query(DB).filter(DB.video_id == video_id) \
-                                       .filter(DB.week != song.week) \
-                                       .filter(DB.position != song.position) \
-                                       .one()
-            except NoResultFound:
-                pass
-            else:
+            old = session.query(DB).filter(DB.video_id == video_id) \
+                                   .filter(DB.week != song.week) \
+                                   .filter(DB.position != song.position) \
+                                   .first()
+            if not old is None:
                 song_path = os.path.join(self.music_dir, song.path)
                 old_path = os.path.join(self.music_dir, old.path)
                 suffix = '.mp3' if audio_only else '.flv'
