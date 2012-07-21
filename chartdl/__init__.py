@@ -105,9 +105,11 @@ class ChartDownloader(object):
                 suffix = '.mp3' if audio_only else '.flv'
                 
                 if os.path.exists(old_path + suffix):
+                    self.log('File does already exist, creating hardlink.')
                     os.link(old_path + suffix, song_path + suffix)
                     song.video_id = video_id
                     song.downloaded = True
+                    continue
 
             self.log('Downloading #{0}: {1!s}.\n'
                      .format(chart['position'], song))
