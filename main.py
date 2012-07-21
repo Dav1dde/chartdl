@@ -69,11 +69,11 @@ def main():
                         choices=chartdl.mtvgt.CHARTS.keys(),
                         default='hitlist',
                         help='chart category')
-    parser.add_argument('-d', '--database', dest='database',
+    parser.add_argument('--database', dest='database',
                         default='sqlite:///music.db',
                         help='path to music database, '
                              'must be a valid sqlalchemy database uri')
-    parser.add_argument('-m', '--music-dir', dest='music_dir',
+    parser.add_argument('--music-dir', dest='music_dir',
                         default='./downloads',
                         help='path to save the downloaded videos/music')
     parser.add_argument('-a', '--audio-only', dest='audio_only',
@@ -87,9 +87,9 @@ def main():
     parser.add_argument('-q', '--quiet', dest='quiet',
                         action='store_true',
                         help='disable status information')
-    parser.add_argument('-u', '--username', dest='username',
+    parser.add_argument('--username', dest='username',
                         help='youtube username')
-    parser.add_argument('-p', '--password', dest='password',
+    parser.add_argument('--password', dest='password',
                         help='youtube password')
     parser.add_argument('--youtube-dl', dest='youtube_dl',
                         default=None,
