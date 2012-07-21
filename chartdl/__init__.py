@@ -32,7 +32,7 @@ else:
 
 
 DOWNLOAD_ICON = os.path.join(os.path.split(os.path.abspath(__file__))[0],
-                             '..', 'src', 'download_icon.png') 
+                             '..', 'src', 'download_icon.png')
 
 class ChartDownloader(object):
     def __init__(self, database_uri, music_dir, verbose=False, notify=False):
@@ -51,12 +51,7 @@ class ChartDownloader(object):
         Base.metadata.create_all(self.engine)
 
     def download_charts(self, type_, username=None, password=None,
-                        audio_only=True, notify=False):
-        self.log('youtube-dl: {}\nmplayer: {}\nlame: {}\n'
-                 .format(self.youtube_dl, self.mplayer, self.lame))
-        self.log('Database: {}\nMusic Directory: {}\n'
-                 .format(self.database_uri, self.music_dir))
-        
+                        audio_only=False, notify=False):
         session = self.Session()
         
         if type_ == 'hitlist':

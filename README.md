@@ -1,4 +1,4 @@
 chartdl
 =======
 
-Retrieves the german charts from mtv and downloads the corresponding videos from youtube and if wanted, encodes the videos with mplayer and lame (flv to mp3)
+Retrieves the german charts from mtv, downloads the corresponding videos from youtube and if wanted, extracts the audio with mplayer and lame (flv to mp3).
