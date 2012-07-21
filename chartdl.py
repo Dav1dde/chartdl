@@ -55,8 +55,6 @@ def make_youtube_dl_launcher():
 def main():
     from argparse import ArgumentParser
     
-    import chartdl.mtvgt
-    
     description = 'Retrieves the german charts from mtv ' \
                   'downloads the corresponding videos from youtube ' \
                   'and if wanted, extracts the audio with ' \
@@ -64,7 +62,7 @@ def main():
     
     parser = ArgumentParser(description=description)
     parser.add_argument('-c', '--category', dest='category',
-                        choices=chartdl.mtvgt.CHARTS.keys(),
+                        choices=['hitlist'],
                         default='hitlist',
                         help='chart category')
     parser.add_argument('--database', dest='database',
@@ -103,7 +101,7 @@ def main():
                         help='shows every error')
     
     ns = parser.parse_args()
-    
+
     if ns.debug:
         from chartdl import ChartDownloader
     else:
