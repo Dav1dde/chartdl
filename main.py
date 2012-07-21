@@ -43,7 +43,7 @@ def main():
     
     with open(yt_dl, 'w') as f:
         f.write('\n'.join(['#!/bin/sh', '',
-                           'python2 {} $@'.format(yt_dl_py)]))
+                           '{} {} $@'.format(sys.executable, yt_dl_py)]))
     os.chmod(yt_dl, 0755)
     
     os.environ['PATH'] += ':' + PATH

@@ -48,6 +48,9 @@ class ChartDownloader(object):
 
     def download_charts(self, type_, username=None, password=None,
                         audio_only=True, notify=False):
+        self.log('Database: {}\nMusic Directory: {}\n'
+                 .format(self.database_uri, self.music_dir))
+        
         session = self.Session()
         
         if type_ == 'hitlist':
@@ -55,15 +58,17 @@ class ChartDownloader(object):
         else:
             raise ValueError
         
-        calendar_week = date.today().isocalendar()[1]
-
         charts = get_charts(type_)
+        chart_queue = Queue()
+        [chart_queue.put((chart, 0)) for chart in charts]
+        
+        calendar_week = date.today().isocalendar()[1]
+        self.log('Calendar week: {}'.format(calendar_week))
         query = session.query(DB).filter(DB.week == calendar_week)
         if not all(song == charts[song.position-1] for song in query):
             calendar_week = (date.today() + timedelta(days=7)).isocalendar()[1]
-        
-        chart_queue = Queue()
-        [chart_queue.put((chart, 0)) for chart in charts]
+            self.log('/{}.'.format(calendar_week))
+        self.log('\n\n')
         
         path = os.path.join(self.music_dir, type_, str(calendar_week))
         if not os.path.isdir(path):
