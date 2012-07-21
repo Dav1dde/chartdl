@@ -1,7 +1,7 @@
 from lxml import html
 
-def get_charts(type_):
-    url, func = CHARTS[type_]
+def get_charts(category):
+    url, func = CHARTS[category]
     return func(html.parse(url).getroot())
 
 def _parse_charts(lxml_html):
@@ -49,9 +49,52 @@ CHARTS = {'album' : ('http://www.mtv.de/charts/4-album-top-50',
                      _parse_video_charts)}
 
 
-if __name__ == '__main__':
+def main():
+    from argparse import ArgumentParser
     import json
     
-    hitlist = get_charts('hitlist')
+    try:
+        import texttable
+    except ImportError:
+        texttable = None
     
-    print json.dumps(hitlist)
+    def make_table(charts, header=None):
+        if header is None:
+            header = ['position', 'last_position', 'artist', 'title']
+        
+        if not texttable is None:
+            table = texttable.Texttable(max_width=80)
+            table.set_deco(table.HEADER | table.HLINES | table.VLINES)
+            table.set_cols_dtype(['i', 'i', 't', 't'])
+            table.set_cols_width([10, 10, 25, 35])
+            table.set_cols_align(['r', 'r', 'l', 'l'])
+            table.set_cols_valign(['m', 'm', 'm', 'm'])
+            table.header([h.replace('_', ' ') for h in header])
+            for chart in charts:
+                table.add_row([chart[k].encode('utf-8')
+                                if isinstance(chart[k], unicode)
+                                else chart[k]
+                               for k in header])
+            return table.draw()
+        else:
+            parser.error('Unable to output table, install `texttable`')
+        
+    parser = ArgumentParser(description='fetches the german music'
+                                        ' charts from mtv')
+    parser.add_argument('-c', '--category', dest='category',
+                        choices=CHARTS.keys(),
+                        default='hitlist',
+                        help='chart category')
+    parser.add_argument('-o', '--output', dest='output',
+                        choices=['table', 'json'],
+                        default='table',
+                        help='output format')
+    
+    ns = parser.parse_args()
+    
+    charts = get_charts(ns.category)
+    print {'table' : make_table, 'json' : json.dumps}[ns.output](charts)
+
+
+if __name__ == '__main__':
+    main()
