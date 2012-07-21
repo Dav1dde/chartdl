@@ -1,8 +1,13 @@
+from urllib2 import urlopen
+from contextlib import closing
+
 from lxml import html
 
 def get_charts(category):
     url, func = CHARTS[category]
-    return func(html.parse(url).getroot())
+    
+    with closing(urlopen(url)) as website:
+        return func(html.fromstring(website.read().decode('utf-8')))
 
 def _parse_charts(lxml_html):
     content = lxml_html.get_element_by_id('content')
@@ -11,11 +16,11 @@ def _parse_charts(lxml_html):
     result = list()
     for position, _, last_position, image, _, info in (e[0] for e in charts_list):
         result.append({'position' : int(position.text.strip()),
-                       'last_position' : _last_position_conv(last_position \
-                                                           .text.strip()),
-                       'image' :  dict(image.attrib),
-                       'title' : info[0].text.strip(),
-                       'artist' : info[1].text.strip()})
+                       'last_position' : _last_position(last_position \
+                                                         .text.strip()),
+                       'image' :  _image(image.attrib),
+                       'title' : unicode(info[0].text).strip(),
+                       'artist' : unicode(info[1].text).strip()})
         
     return result
 
@@ -26,15 +31,21 @@ def _parse_video_charts(lxml_html):
     result = list()
     for position, _, image, _, info in (e[0] for e in charts_list):
         result.append({'position' : int(position.text.strip()),
-                       'image' :  dict(image.attrib),
-                       'title' : info[0].text.strip(),
-                       'artist' : info[1].text.strip()})
+                       'image' :  _image(image.attrib),
+                       'title' : unicode(info[0].text).strip(),
+                       'artist' : unicode(info[1].text).strip()})
         
     return result
     
 
-def _last_position_conv(pos):
-    return -1 if pos == 'new' else int(pos) 
+def _last_position(pos):
+    return -1 if pos == 'new' else int(pos)
+
+def _image(attrib):
+    return {'alt' : unicode(attrib['alt']),
+            'height' : int(attrib['height']),
+            'width' : int(attrib['width']),
+            'src' : unicode(attrib['src'])}
 
 
 CHARTS = {'album' : ('http://www.mtv.de/charts/4-album-top-50',
@@ -93,6 +104,7 @@ def main():
     ns = parser.parse_args()
     
     charts = get_charts(ns.category)
+    __import__('pprint').pprint(charts)
     print {'table' : make_table, 'json' : json.dumps}[ns.output](charts)
 
 
