@@ -42,12 +42,18 @@ class ChartDownloader(object):
         self.notify = notify
         self._output_fd = sys.stdout
         
+        self.youtube_dl = 'youtube-dl'
+        self.mplayer = 'mplayer'
+        self.lame = 'lame'
+        
         self.engine = create_engine(self.database_uri, convert_unicode=True)
         self.Session = sessionmaker(bind=self.engine)
         Base.metadata.create_all(self.engine)
 
     def download_charts(self, type_, username=None, password=None,
                         audio_only=True, notify=False):
+        self.log('youtube-dl: {}\nmplayer: {}\nlame: {}\n'
+                 .format(self.youtube_dl, self.mplayer, self.lame))
         self.log('Database: {}\nMusic Directory: {}\n'
                  .format(self.database_uri, self.music_dir))
         
@@ -132,11 +138,9 @@ class ChartDownloader(object):
         flv_path = path + '.flv'
         mp3_path = path + '.mp3'
             
-        args = ['youtube-dl', '--no-continue', '-o', '-']
-        
+        args = [self.youtube_dl, '--no-continue', '-o', '-']
         if not username is None and not password is None:
             args.extend(['-u', username, '-p', password])
-        
         args.append(url)
      
         if audio_only:
@@ -145,7 +149,7 @@ class ChartDownloader(object):
             
             youtube_dl = Popen(args, stdout=PIPE, stderr=PIPE,
                                universal_newlines=True)
-            mplayer = Popen(['mplayer', '-', '-really-quiet',
+            mplayer = Popen([self.mplayer, '-', '-really-quiet',
                              '-vc', 'null', '-vo', 'null',
                              '-ao', 'pcm:fast:file=' + tempfile.name],
                             stdin=youtube_dl.stdout, stdout=PIPE, stderr=PIPE,
@@ -163,7 +167,7 @@ class ChartDownloader(object):
                 raise EncodingError(mp_stderr.splitlines()[-1])
             
             self.log('\nStarting lame.\n')
-            lame = Popen(['lame', '-h', tempfile.name, mp3_path],
+            lame = Popen([self.lame, '-h', tempfile.name, mp3_path],
                          stdout=PIPE, stderr=PIPE)
             lame_stdout, lame_stderr = lame.communicate()
                         
