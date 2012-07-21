@@ -43,7 +43,7 @@ class HitlistSong(Base):
     
     @staticmethod
     def construct_path(week, artist, title):
-        return os.path.join(HitlistSong.__tablename__, str(week),
+        return os.path.join(HitlistSong.__tablename__, unicode(week),
                                     u'{} - {}'.format(artist.replace('/', ' '),
                                                       title.replace('/', ' ')))
 
@@ -55,8 +55,14 @@ class HitlistSong(Base):
             return Base.__eq__(self, other)
     
     def __ne__(self, other):
-        return not self == other
+        if isinstance(other, dict):
+            return not self == other
+        else:
+            return Base.__ne__(self, other)
 
 
+    def __unicode__(self):
+        return u'{self.artist} - {self.title}'.format(self=self)
+    
     def __str__(self):
-        return '{self.artist} - {self.title}'.format(self=self)
+        return self.__unicode__().encode('utf-8')
