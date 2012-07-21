@@ -59,7 +59,7 @@ class ChartDownloader(object):
         else:
             raise ValueError
         
-        charts = get_charts(type_)
+        charts = list(get_charts(type_))
         chart_queue = Queue()
         [chart_queue.put((chart, 0)) for chart in charts]
         
@@ -91,40 +91,41 @@ class ChartDownloader(object):
                 if song.downloaded:
                     continue
 
+            self.log('Downloading #{0}: {1!s}.\n'
+                     .format(chart['position'], song))
+            
             video = search_youtube(chart)[video_result]
             video_url = video.get('href')
             video_id = parse_qs(urlparse(video_url).query)['v'][0]
-            
+
             old = session.query(DB).filter(DB.video_id == video_id) \
                                    .filter(DB.week != song.week) \
                                    .filter(DB.position != song.position) \
                                    .first()
             if not old is None:
-                song_path = os.path.join(self.music_dir, song.path)
-                old_path = os.path.join(self.music_dir, old.path)
                 suffix = '.mp3' if audio_only else '.flv'
+                song_path = os.path.join(self.music_dir, song.path) + suffix
+                old_path = os.path.join(self.music_dir, old.path) + suffix
                 
-                if os.path.exists(old_path + suffix):
-                    self.log('File does already exist, creating hardlink.')
-                    os.link(old_path + suffix, song_path + suffix)
+                if os.path.exists(old_path):
+                    self.log('File does already exist, creating hardlink.\n')
+                    if not os.path.exists(song_path):
+                        os.link(old_path, song_path)
                     song.video_id = video_id
                     song.downloaded = True
-                    continue
-
-            self.log('Downloading #{0}: {1!s}.\n'
-                     .format(chart['position'], song))
-            try:
-                self.download(video_url, song,
-                              username=username, password=password,
-                              audio_only=audio_only)
-            except CalledProcessError, e:
-                self.log(e)
-            except DownloadError, e:
-                if e.is_gema_error:
-                    chart_queue.put((chart, video_result+1))
             else:
-                song.video_id = video_id
-                song.downloaded = True
+                try:
+                    self.download(video_url, song,
+                                  username=username, password=password,
+                                  audio_only=audio_only)
+                except CalledProcessError, e:
+                    self.log(e)
+                except DownloadError, e:
+                    if e.is_gema_error:
+                        chart_queue.put((chart, video_result+1))
+                else:
+                    song.video_id = video_id
+                    song.downloaded = True
                     
             session.commit()
             
