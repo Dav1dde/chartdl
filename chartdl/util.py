@@ -32,6 +32,8 @@ def yield_lines(fd):
         yield line
 
 def ytdl_filter(line):
+    if 'destination' in line.lower():
+        return ''
     if ETA_RE.match(line):
         return '\r' + line.rstrip()
     return line
