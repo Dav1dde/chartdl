@@ -55,8 +55,6 @@ def make_youtube_dl_launcher():
 def main():
     from argparse import ArgumentParser
     
-    with suppress_output(sys.stderr):
-        from chartdl import ChartDownloader
     import chartdl.mtvgt
     
     description = 'Retrieves the german charts from mtv ' \
@@ -100,8 +98,17 @@ def main():
     parser.add_argument('--lame', dest='lame',
                         default='lame',
                         help='path to lame executable')
+    parser.add_argument('--debug', dest='debug',
+                        action='store_true',
+                        help='shows every error')
     
     ns = parser.parse_args()
+    
+    if ns.debug:
+        from chartdl import ChartDownloader
+    else:
+        with suppress_output(sys.stderr):
+            from chartdl import ChartDownloader
     
     yt_dl = ns.youtube_dl
     if yt_dl is None:       
