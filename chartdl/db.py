@@ -34,6 +34,9 @@ class HitlistSong(Base):
                    week=week, downloaded=downloaded,
                    path=cls.construct_path(week, artist, title))
     
+    def rebuild_path(self):
+        self.path = self.construct_path(self.week, self.artist, self.title)
+    
     @property
     def constructed_path(self):
         self.construct_path(self.week, self.artist, self.title)

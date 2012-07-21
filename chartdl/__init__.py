@@ -85,11 +85,12 @@ class ChartDownloader(object):
             except NoResultFound:
                 song = DB.from_chart(chart)
                 song.week = calendar_week
+                song.rebuild_path()
                 session.add(song)
             else:
                 if song.downloaded:
                     continue
-            
+
             video = search_youtube(chart)[video_result]
             video_url = video.get('href')
             video_id = parse_qs(urlparse(video_url).query)['v'][0]
@@ -132,7 +133,7 @@ class ChartDownloader(object):
         path = os.path.join(self.music_dir, song.path)
         flv_path = path + '.flv'
         mp3_path = path + '.mp3'
-            
+
         args = [self.youtube_dl, '--no-continue', '-o', '-']
         if not username is None and not password is None:
             args.extend(['-u', username, '-p', password])
@@ -177,7 +178,14 @@ class ChartDownloader(object):
                 audio.save(mp3_path)
         else:
             with open(flv_path, 'wb') as f:
-                check_call(args, stdout=f)
+                youtube_dl = Popen(args, stdout=f, stderr=PIPE,
+                                   universal_newlines=True)
+                yt_stderr = [self.log(ytdl_filter(line)) for line in
+                             yield_lines(youtube_dl.stderr) if line.strip()]
+                youtube_dl.communicate()
+                
+            if not youtube_dl.returncode == 0:
+                raise DownloadError(yt_stderr[-1])
                 
     def _notify_download_done(self, chart, notify, success):
         if self.notify and not pynotify is None:
