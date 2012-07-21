@@ -36,7 +36,7 @@ def suppress_output(fd):
         
 def youtube_dl_launcher(path):
     if sys.platform == 'win32':
-        starter = '\n'.join(['@echo off', '', '{} {} %0'])
+        starter = '\n'.join(['@echo off', '', '{} {} %*'])
     else:
         starter = '\n'.join(['#!/bin/sh', '', '{} {} $@'])
     return starter.format(sys.executable, path)
