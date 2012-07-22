@@ -76,14 +76,12 @@ def make_table(charts, header=None):
     table.set_cols_valign(['m', 'm', 'm', 'm'])
     table.header([h.replace('_', ' ') for h in header])
     for chart in charts:
-        table.add_row([unicode(chart[k]).encode('utf-8')
-                       for k in header])
+        table.add_row([chart[k] for k in header])
     return table.draw()
 
 
 def main():
     from argparse import ArgumentParser
-    from itertools import islice
     import json
 
     parser = ArgumentParser(description='fetches the german music'
@@ -112,10 +110,10 @@ def main():
     all_charts = get_charts(args.category)
     if args.reversed:
         all_charts = reversed(list(all_charts))
-    charts = islice(all_charts, 0, args.number)
+    charts = list(all_charts)[:args.number]
     
     format_charts = {'table': make_table, 'json': json.dumps}[args.output]
-    print(format_charts(charts))
+    print(format_charts(charts).encode('utf-8'))
 
 
 if __name__ == '__main__':
