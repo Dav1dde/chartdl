@@ -135,7 +135,7 @@ def main():
         remaining_args = sys.argv
     
     parser.add_argument('-c', '--category', dest='category',
-                        choices=['hitlist'],
+                        choices=['hitlist', 'dance'],
                         default='hitlist',
                         help='chart category')
     parser.add_argument('--database', dest='database',

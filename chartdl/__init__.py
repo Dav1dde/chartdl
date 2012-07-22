@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 from subprocess import CalledProcessError, check_call, Popen, PIPE
 from tempfile import NamedTemporaryFile
 from urlparse import urlparse, parse_qs
-from datetime import timedelta, date
 from urllib import urlretrieve
 from Queue import Queue
 import os.path
@@ -16,9 +15,10 @@ from sqlalchemy import create_engine
 from lxml import html
 
 from chartdl.mtvgt import get_charts
-from chartdl.db import Base, HitlistSong
+from chartdl.db import Base, HitlistSong, DanceSong
 from chartdl.exc import DownloadError, EncodingError
-from chartdl.util import search_youtube, yield_lines, ytdl_filter
+from chartdl.util import (search_youtube, yield_lines,
+                          ytdl_filter, chart_calendarweek)
 
 try:
     from mutagen.easyid3 import EasyID3
@@ -52,29 +52,33 @@ class ChartDownloader(object):
         self.Session = sessionmaker(bind=self.engine)
         Base.metadata.create_all(self.engine)
 
-    def download_charts(self, type_, username=None, password=None,
+    def download_charts(self, category, username=None, password=None,
                         audio_only=False, notify=False):
         action = False
         session = self.Session()
         
-        if type_ == 'hitlist':
+        if category == 'hitlist':
             DB = HitlistSong
+        elif category == 'dance':
+            DB = DanceSong
         else:
             raise ValueError
         
-        charts = list(get_charts(type_))
+        charts = list(get_charts(category))
         chart_queue = Queue()
         [chart_queue.put((chart, 0)) for chart in charts]
         
-        calendar_week = date.today().isocalendar()[1]
+        # TODO: 
+        #  friday and no new charts list
+        calendar_week = chart_calendarweek()
         self.log('Calendar week: {}'.format(calendar_week))
         query = session.query(DB).filter(DB.week == calendar_week)
         if not all(song == charts[song.position-1] for song in query):
-            calendar_week = (date.today() + timedelta(days=7)).isocalendar()[1]
+            calendar_week += 1
             self.log('/{}.'.format(calendar_week))
         self.log('\n\n')
         
-        path = os.path.join(self.music_dir, type_, str(calendar_week))
+        path = os.path.join(self.music_dir, category, str(calendar_week))
         if not os.path.isdir(path):
             os.makedirs(path)
         

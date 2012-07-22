@@ -1,17 +1,18 @@
 from __future__ import unicode_literals
 
+from datetime import datetime
+import os.path
+
 from sqlalchemy import Table, Column, String, Integer, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 
-from datetime import datetime
-import os.path
+from chartdl.util import chart_calendarweek
+
 
 Base = declarative_base() 
 
 
-class HitlistSong(Base):
-    __tablename__ = 'hitlist'
-    
+class SongMixin(object):
     artist = Column(String, nullable=False)
     title = Column(String, nullable=False)
     image_url = Column(String, default='')
@@ -24,7 +25,7 @@ class HitlistSong(Base):
 
     @classmethod
     def from_chart(cls, chart, downloaded=False):
-        week = datetime.now().isocalendar()[1]
+        week = chart_calendarweek()
         artist = chart['artist']
         title = chart['title']
         image_url = chart['image']['src']
@@ -43,11 +44,11 @@ class HitlistSong(Base):
     def constructed_path(self):
         self.construct_path(self.week, self.artist, self.title)
     
-    @staticmethod
-    def construct_path(week, artist, title):
-        return os.path.join(HitlistSong.__tablename__, unicode(week),
-                                    u'{} - {}'.format(artist.replace('/', ' '),
-                                                      title.replace('/', ' ')))
+    @classmethod
+    def construct_path(cls, week, artist, title):
+        return os.path.join(cls.__tablename__, unicode(week),
+                            '{} - {}'.format(artist.replace('/', ' '),
+                                             title.replace('/', ' ')))
 
     def __eq__(self, other):
         if isinstance(other, dict):
@@ -68,3 +69,11 @@ class HitlistSong(Base):
     
     def __str__(self):
         return self.__unicode__().encode('utf-8')
+
+
+class HitlistSong(Base, SongMixin):
+    __tablename__ = 'hitlist'
+
+
+class DanceSong(Base, SongMixin):
+    __tablename__ = 'dance'

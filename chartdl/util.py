@@ -1,8 +1,10 @@
 from __future__ import unicode_literals
 
 from urllib import quote_plus
-from lxml import html
+from datetime import date
 import re
+
+from lxml import html
 
 
 YT_SEARCH_URL = 'http://www.youtube.com/results?search_type=videos' \
@@ -39,3 +41,12 @@ def ytdl_filter(line):
     if ETA_RE.match(line):
         return '\r' + line.rstrip()
     return line
+
+# assume every friday new charts arrive on the website
+def chart_calendarweek():
+    today = date.today()
+    week = today.isocalendar()[1]
+    
+    if today.isoweekday() >= 5: # friday
+        week += 1
+    return week
