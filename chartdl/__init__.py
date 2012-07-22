@@ -54,6 +54,7 @@ class ChartDownloader(object):
 
     def download_charts(self, type_, username=None, password=None,
                         audio_only=False, notify=False):
+        action = False
         session = self.Session()
         
         if type_ == 'hitlist':
@@ -129,9 +130,12 @@ class ChartDownloader(object):
                     song.video_id = video_id
                     song.downloaded = True
                     
+            action = True
             session.commit()
-            
             self._notify_download_done(chart, notify, song.downloaded)
+        
+        if not action:
+            self.log('Nothing to do.\n')
 
     def download(self, url, song,
                  username=None, password=None, audio_only=False):
