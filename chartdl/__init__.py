@@ -15,7 +15,7 @@ from sqlalchemy import create_engine
 from lxml import html
 
 from chartdl.mtvgt import get_charts
-from chartdl.db import Base, HitlistSong, DanceSong
+from chartdl.db import Base, HitlistSong, DanceSong, BlackSong
 from chartdl.exc import DownloadError, EncodingError
 from chartdl.util import (search_youtube, yield_lines,
                           ytdl_filter, chart_calendarweek)
@@ -57,12 +57,9 @@ class ChartDownloader(object):
         action = False
         session = self.Session()
         
-        if category == 'hitlist':
-            DB = HitlistSong
-        elif category == 'dance':
-            DB = DanceSong
-        else:
-            raise ValueError
+        DB = {'hitlist' : HitlistSong,
+              'dance' : DanceSong,
+              'black' : BlackSong}[category]
         
         charts = list(get_charts(category))
         chart_queue = Queue()

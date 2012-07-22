@@ -77,3 +77,6 @@ class HitlistSong(Base, SongMixin):
 
 class DanceSong(Base, SongMixin):
     __tablename__ = 'dance'
+    
+class BlackSong(Base, SongMixin):
+    __tablename__ = 'black'
