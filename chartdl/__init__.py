@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from subprocess import CalledProcessError, check_call, Popen, PIPE
 from tempfile import NamedTemporaryFile
 from urlparse import urlparse, parse_qs
@@ -198,8 +200,8 @@ class ChartDownloader(object):
                 image = DOWNLOAD_ICON
             
             status = 'finished' if success else 'failed'
-            title = u'Download {}: #{}'.format(status, chart['position'])
-            text = u'{} - {}'.format(chart['artist'], chart['title'])
+            title = 'Download {}: #{}'.format(status, chart['position'])
+            text = '{} - {}'.format(chart['artist'], chart['title'])
             self.log(' '.join([title, text, '\n\n']))
             msg = pynotify.Notification(title, text, image)
             msg.show()

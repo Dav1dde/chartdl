@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from sqlalchemy import Table, Column, String, Integer, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -62,7 +64,7 @@ class HitlistSong(Base):
 
 
     def __unicode__(self):
-        return u'{self.artist} - {self.title}'.format(self=self)
+        return '{self.artist} - {self.title}'.format(self=self)
     
     def __str__(self):
         return self.__unicode__().encode('utf-8')

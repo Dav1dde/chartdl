@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from urllib import quote_plus
 from lxml import html
 import re
