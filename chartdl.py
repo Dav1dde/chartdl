@@ -116,19 +116,23 @@ def main():
     parser.add_argument('--config', dest='config',
                         metavar='FILE',
                         help='specify config file')
-    arg, remaining_args = parser.parse_known_args()
     
     defaults = dict()
-    if not arg.config is None:
-        config = SafeConfigParser()
-        config.read(arg.config)
-        try:
-            items = validate_config(config.items('chartdl'),
-                                    booleans=['audio_only', 'notify', 
-                                              'debug', 'quiet'])
-        except ValidationError, e:
-            parser.error(unicode(e))
-        defaults.update(items)
+    if not '-h' in sys.argv and not '--help' in sys.argv: 
+        arg, remaining_args = parser.parse_known_args()
+        
+        if not arg.config is None:
+            config = SafeConfigParser()
+            config.read(arg.config)
+            try:
+                items = validate_config(config.items('chartdl'),
+                                        booleans=['audio_only', 'notify', 
+                                                  'debug', 'quiet'])
+            except ValidationError, e:
+                parser.error(unicode(e))
+            defaults.update(items)
+    else:
+        remaining_args = sys.argv
     
     parser.add_argument('-c', '--category', dest='category',
                         choices=['hitlist'],

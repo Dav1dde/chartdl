@@ -1,5 +1,6 @@
 *.pyc
 *.db
+*.cfg
 .project
 .pydevproject
 .settings/*
