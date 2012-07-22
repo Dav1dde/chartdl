@@ -56,6 +56,7 @@ def make_youtube_dl_launcher():
 
 def main():
     from argparse import ArgumentParser
+    from ConfigParser import SafeConfigParser
     
     description = 'Retrieves the german charts from mtv ' \
                   'downloads the corresponding videos from youtube ' \
@@ -63,6 +64,17 @@ def main():
                   'mplayer and lame (flv to mp3).' \
     
     parser = ArgumentParser(description=description)
+    parser.add_argument('--config', dest='config',
+                        metavar='FILE',
+                        help='specify config file')
+    arg, remaining_args = parser.parse_known_args()
+    
+    defaults = dict()
+    if not arg.config is None:
+        config = SafeConfigParser()
+        config.read(arg.config)
+        defaults.update(config.items('chartdl'))
+    
     parser.add_argument('-c', '--category', dest='category',
                         choices=['hitlist'],
                         default='hitlist',
@@ -102,7 +114,9 @@ def main():
                         action='store_true',
                         help='shows every error')
     
-    ns = parser.parse_args()
+    parser.set_defaults(**defaults)
+    
+    ns = parser.parse_args(remaining_args)
 
     if ns.debug:
         from chartdl import ChartDownloader

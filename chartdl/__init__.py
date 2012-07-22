@@ -121,7 +121,7 @@ class ChartDownloader(object):
                                   username=username, password=password,
                                   audio_only=audio_only)
                 except CalledProcessError, e:
-                    self.log(e)
+                    self.log(e.message)
                 except DownloadError, e:
                     if e.is_gema_error:
                         chart_queue.put((chart, video_result+1))
@@ -208,9 +208,7 @@ class ChartDownloader(object):
     
     def log(self, message):
         if self.verbose:
-            msg = message.encode('utf-8') if isinstance(message, unicode) \
-                    else message
-            self._output_fd.write(msg)
+            self._output_fd.write(message.encode('utf-8'))
             self._output_fd.flush()
         return message
         
