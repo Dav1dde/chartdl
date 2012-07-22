@@ -52,11 +52,39 @@ def make_youtube_dl_launcher():
     os.chmod(yt_dl, 0755)
     
     return yt_dl
+
+
+def extended_bool(b):
+    if isinstance(b, basestring):
+        return b.lower() in ('yes', '1', 'true', 'on')
+    else:
+        return bool(b)
+
+def validate_config(items, booleans=None, floats=None, ints=None):
+    if booleans is None:
+        booleans = list()
+    if floats is None:
+        floats = list()
+    if ints is None:
+        ints = list()
     
+    result = list()
+    
+    for key, value in items:
+        if key in booleans:
+            value = extended_bool(value)
+        elif key in floats:
+            value = float(value)
+        elif key in ints:
+            value = int(value)
+        result.append((key, value))
+    
+    return result
+
 
 def main():
-    from argparse import ArgumentParser
     from ConfigParser import SafeConfigParser
+    from argparse import ArgumentParser
     
     description = 'Retrieves the german charts from mtv ' \
                   'downloads the corresponding videos from youtube ' \
@@ -73,7 +101,10 @@ def main():
     if not arg.config is None:
         config = SafeConfigParser()
         config.read(arg.config)
-        defaults.update(config.items('chartdl'))
+        items = validate_config(config.items('chartdl'),
+                                booleans=['audio_only', 'notify', 
+                                          'debug', 'quiet'])
+        defaults.update(items)
     
     parser.add_argument('-c', '--category', dest='category',
                         choices=['hitlist'],
