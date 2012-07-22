@@ -10,17 +10,18 @@ and if wanted, extracts the audio with [mplayer](http://www.mplayerhq.hu/) and
 ## Usage
 
 ```
-usage: chartdl.py [-h] [-c {album,dance,video,hitlist,black}]
-                  [--database DATABASE] [--music-dir MUSIC_DIR] [-a] [-n] [-q]
-                  [--username USERNAME] [--password PASSWORD]
-                  [--youtube-dl YOUTUBE_DL] [--mplayer MPLAYER] [--lame LAME]
+usage: chartdl.py [-h] [--config FILE] [-c {hitlist}] [--database DATABASE]
+                  [--music-dir MUSIC_DIR] [-a] [-n] [-q] [--username USERNAME]
+                  [--password PASSWORD] [--youtube-dl YOUTUBE_DL]
+                  [--mplayer MPLAYER] [--lame LAME] [--debug]
 
 Retrieves the german charts from mtv downloads the corresponding videos from
 youtube and if wanted, extracts the audio with mplayer and lame (flv to mp3).
 
 optional arguments:
   -h, --help            show this help message and exit
-  -c {album,dance,video,hitlist,black}, --category {album,dance,video,hitlist,black}
+  --config FILE         specify config file
+  -c {hitlist}, --category {hitlist}
                         chart category
   --database DATABASE   path to music database, must be a valid sqlalchemy
                         database uri
@@ -36,4 +37,25 @@ optional arguments:
                         path to youtube-dl executable
   --mplayer MPLAYER     path to mplayer executable
   --lame LAME           path to lame executable
+  --debug               shows every error
 ```
+
+## Config
+
+`chartdl` also supports config files, these are simple ini files with a section called `chartdl`:
+
+
+```ini
+[chartdl]
+music_dir=./music/charts
+database=sqlite:///music.db
+category=hitlist
+username=yt_username
+password=yt_password
+audio_only=true
+notify=true
+```
+
+Possible keys for the ini are: 
+`database`, `music_dir`, `audio_only`, `notify`, `quiet`, `username`, `password`,
+`youtube_dl`, `mplayer`, `lame` and `debug`
