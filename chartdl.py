@@ -1,11 +1,29 @@
 from __future__ import unicode_literals
 
 from contextlib import contextmanager
-import os
+from itertools import izip_longest
 import os.path
 import sys
 
 PATH = os.path.split(os.path.abspath(__file__))[0]
+
+
+class ValidationError(Exception):
+    def __init__(self, key, value, validator):
+        self.key = key
+        self.value = value
+        self.validator = validator
+        self.expected = {config_bool : 'boolean',
+                         float : 'float',
+                         int : 'int'}[self.validator]
+    
+    def __unicode__(self):
+        return 'Unable to validate entry `{self.key}: {self.value}`, ' \
+               'expected {self.expected}'.format(self=self)
+    
+    def __str__(self):
+        return self.__unicode__().encode('utf-8')
+
 
 # from https://gist.github.com/3151059
 @contextmanager
@@ -54,31 +72,34 @@ def make_youtube_dl_launcher():
     return yt_dl
 
 
-def extended_bool(b):
+def config_bool(b):
     if isinstance(b, basestring):
+        if not b.lower() in ('yes', '1', 'true', 'on',
+                             'no', '0', 'false', 'off'):
+            raise ValueError
         return b.lower() in ('yes', '1', 'true', 'on')
-    else:
-        return bool(b)
+    raise ValueError
 
 def validate_config(items, booleans=None, floats=None, ints=None):
-    if booleans is None:
-        booleans = list()
-    if floats is None:
-        floats = list()
-    if ints is None:
-        ints = list()
+    validators = dict()
+    if not booleans is None:
+        validators.update(izip_longest(booleans, [], fillvalue=config_bool))
+    if not floats is None:
+        validators.update(izip_longest(floats, [], fillvalue=float))
+    if not ints is None:
+        validators.update(izip_longest(ints, [], fillvalue=int))
+    null_validator = lambda x: x
     
     result = list()
     
     for key, value in items:
-        if key in booleans:
-            value = extended_bool(value)
-        elif key in floats:
-            value = float(value)
-        elif key in ints:
-            value = int(value)
+        validator = validators.get(key, null_validator)
+        try:
+            value = validator(value)
+        except ValueError:
+            raise ValidationError(key, value, validator)
         result.append((key, value))
-    
+
     return result
 
 
@@ -101,9 +122,12 @@ def main():
     if not arg.config is None:
         config = SafeConfigParser()
         config.read(arg.config)
-        items = validate_config(config.items('chartdl'),
-                                booleans=['audio_only', 'notify', 
-                                          'debug', 'quiet'])
+        try:
+            items = validate_config(config.items('chartdl'),
+                                    booleans=['audio_only', 'notify', 
+                                              'debug', 'quiet'])
+        except ValidationError, e:
+            parser.error(unicode(e))
         defaults.update(items)
     
     parser.add_argument('-c', '--category', dest='category',
