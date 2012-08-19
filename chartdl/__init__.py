@@ -100,8 +100,12 @@ class ChartDownloader(object):
             
             video = search_youtube(chart)[video_result]
             video_url = video.get('href')
-            video_id = parse_qs(urlparse(video_url).query)['v'][0]
-            print video_id
+            
+            try:
+                video_id = parse_qs(urlparse(video_url).query)['v'][0]
+            except KeyError:
+                self.log('Unable to retrieve url from youtube: {}'.format(video_url))
+                continue
             old = session.query(DB).filter(DB.video_id == video_id) \
                                    .filter(DB.week != song.week) \
                                    .first()
