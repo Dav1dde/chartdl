@@ -62,8 +62,6 @@ class ChartDownloader(object):
               'black' : BlackSong}[category]
         
         charts = list(get_charts(category))
-        chart_queue = Queue()
-        [chart_queue.put((chart, 0)) for chart in charts]
         
         # TODO: 
         #  friday and no new charts list
@@ -78,10 +76,8 @@ class ChartDownloader(object):
         path = os.path.join(self.music_dir, category, str(calendar_week))
         if not os.path.isdir(path):
             os.makedirs(path)
-        
-        while not chart_queue.empty():
-            chart, video_result = chart_queue.get()            
-            
+    
+        for chart in charts:
             query = session.query(DB).filter(DB.week == calendar_week) \
                                      .filter(DB.position == chart['position'])
             try:
@@ -92,13 +88,18 @@ class ChartDownloader(object):
                 song.rebuild_path()
                 session.add(song)
             else:
-                if song.downloaded:
-                    continue
+                continue
+        
+        chart_queue = Queue()
+        [chart_queue.put((song, 0)) for song in session.query(DB).filter(DB.downloaded == False)]
+        
+        while not chart_queue.empty():
+            song, video_result = chart_queue.get()
 
-            self.log('Downloading #{0}: {1!s}.\n'
-                     .format(chart['position'], song))
+            self.log('Downloading #{0} (Week {1}): {2!s}.\n'
+                     .format(song.position, song.week, song))
             
-            video = search_youtube(chart)[video_result]
+            video = search_youtube(song)[video_result]
             video_url = video.get('href')
             
             try:
@@ -130,14 +131,14 @@ class ChartDownloader(object):
                     self.log(e.message)
                 except DownloadError, e:
                     if e.is_gema_error:
-                        chart_queue.put((chart, video_result+1))
+                        chart_queue.put((song, video_result+1))
                 else:
                     song.video_id = video_id
                     song.downloaded = True
                     
             action = True
             session.commit()
-            self._notify_download_done(chart, notify, song.downloaded)
+            self._notify_download_done(song, notify)
         
         if not action:
             self.log('Nothing to do.\n')
@@ -201,16 +202,16 @@ class ChartDownloader(object):
             if not youtube_dl.returncode == 0:
                 raise DownloadError(yt_stderr[-1])
                 
-    def _notify_download_done(self, chart, notify, success):
+    def _notify_download_done(self, song, notify):
         if self.notify and not pynotify is None:
-            if chart['image'].get('src'):
-                image, _ = urlretrieve(chart['image']['src'])
+            if song.image_url:
+                image, _ = urlretrieve(song.image_url)
             else:
                 image = DOWNLOAD_ICON
             
-            status = 'finished' if success else 'failed'
-            title = 'Download {}: #{}'.format(status, chart['position'])
-            text = '{} - {}'.format(chart['artist'], chart['title'])
+            status = 'finished' if song.downloaded else 'failed'
+            title = 'Download {}: #{}/{}'.format(status, song.position, song.week)
+            text = '{} - {}'.format(song.artist, song.title)
             self.log(' '.join([title, text, '\n\n']))
             msg = pynotify.Notification(title, text, image)
             msg.show()

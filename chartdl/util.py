@@ -14,9 +14,8 @@ ETA_RE = r'\[download\]\s+(?P<progress>\d{1,3}\.\d{1,2}%)\s+of\s+' \
           '\s+ETA\s+(?P<eta>\d+:\d{2})\n?'
 ETA_RE = re.compile(ETA_RE, re.IGNORECASE)
 
-def search_youtube(chart):
-    query = quote_plus(' '.join([chart['artist'],
-                                 chart['title']]).encode('utf-8')) \
+def search_youtube(song):
+    query = quote_plus(' '.join([song.artist, song.title]).encode('utf-8')) \
                        .decode('utf-8')
     
     search_url = YT_SEARCH_URL.format(query=query)
