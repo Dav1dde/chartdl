@@ -62,8 +62,8 @@ def youtube_dl_launcher(path):
     return starter.format(sys.executable, path)
 
 def make_youtube_dl_launcher():
-    yt_dl = os.path.join(PATH, 'youtube-dl')
-    yt_dl_py = os.path.join(PATH, 'youtube_dl', '__main__.py')
+    yt_dl = os.path.join(PATH, 'launch_youtube-dl')
+    yt_dl_py = os.path.join(PATH, 'youtube-dl', 'youtube_dl', '__main__.py')
     
     with open(yt_dl, 'w') as f:
         f.write(youtube_dl_launcher(yt_dl_py))
