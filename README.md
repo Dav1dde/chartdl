@@ -6,6 +6,20 @@ from youtube (with [youtube-dl](http://rg3.github.com/youtube-dl/))
 and if wanted, extracts the audio with [mplayer](http://www.mplayerhq.hu/) and 
 [lame](http://lame.sourceforge.net/) (flv to mp3).
 
+## Installation ##
+
+Getting `chartdl` from Github:
+
+```
+git clone git://github.com/Dav1dde/chartdl.git
+git submodule init
+git submodule update
+```
+
+Starting chartdl:
+
+`python chartdl.py`
+
 
 ## Usage
 
